@@ -147,6 +147,12 @@ select {
   padding: 8px 10px;
 }
 
+.conversion-options {
+  display: grid;
+  max-width: 280px;
+  margin-top: 18px;
+}
+
 input[type="color"] {
   padding: 3px;
 }
@@ -221,6 +227,12 @@ details[open] .summary-hint {
   padding-top: 20px;
 }
 
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .rules {
   display: grid;
   gap: 12px;
@@ -229,12 +241,23 @@ details[open] .summary-hint {
 
 .rule-row {
   display: grid;
-  grid-template-columns: minmax(140px, 1.5fr) minmax(90px, 0.7fr) minmax(90px, 0.7fr) minmax(120px, 0.8fr) auto;
+  grid-template-columns: minmax(140px, 1.5fr) minmax(90px, 0.7fr) minmax(90px, 0.7fr) minmax(120px, 0.8fr) minmax(110px, 0.7fr) auto;
   gap: 12px;
   align-items: end;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 18px;
+}
+
+.checkbox-label {
+  align-items: center;
+  grid-template-columns: 1fr auto;
+  min-height: 40px;
+}
+
+.checkbox-label input {
+  min-height: auto;
+  width: auto;
 }
 
 label {
@@ -251,6 +274,24 @@ label {
   background: transparent;
   border: 1px solid var(--line);
   color: var(--text);
+}
+
+.download-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.svg-download {
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  padding: 0 14px;
+}
+
+.svg-download:hover {
+  background: var(--button);
+  color: var(--button-text);
 }
 
 .status,

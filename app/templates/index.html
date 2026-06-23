@@ -21,6 +21,14 @@
           <span class="drop-label">Drop DXF here or click to browse</span>
           <input type="file" id="fileInput" accept=".dxf">
         </div>
+        <div class="conversion-options">
+          <label>Output mode
+            <select id="summaryMode">
+              <option value="pdf-only">PDF only</option>
+              <option value="with-summary">PDF + summary</option>
+            </select>
+          </label>
+        </div>
         <p class="status" id="status">Waiting for a DXF file.</p>
       </section>
 
@@ -30,7 +38,10 @@
             <p class="eyebrow">Preview</p>
             <h2>Converted PDF</h2>
           </div>
-          <a class="download" id="downloadLink" href="#" download>Download PDF</a>
+          <div class="download-group">
+            <a class="download" id="downloadLink" href="#" download>Download PDF</a>
+            <a class="download svg-download" id="downloadSvgLink" href="#" download>Download SVG (Illustrator)</a>
+          </div>
         </div>
         <iframe id="pdfPreview" title="PDF preview"></iframe>
       </section>
@@ -47,7 +58,10 @@
         <div class="settings-body">
           <div class="section-title compact">
             <p class="note">Rule matching is case-insensitive and checks whether the layer name contains the text in the Match field.</p>
-            <button type="button" id="addRule">Add rule</button>
+            <div class="settings-actions">
+              <button type="button" id="saveSettings">Save settings</button>
+              <button type="button" id="addRule">Add rule</button>
+            </div>
           </div>
           <div class="rules" id="rules"></div>
         </div>
@@ -63,10 +77,15 @@
       const pdfPreview = document.getElementById("pdfPreview");
       const downloadLink = document.getElementById("downloadLink");
       const addRuleButton = document.getElementById("addRule");
+      const saveSettingsButton = document.getElementById("saveSettings");
       const themeToggle = document.getElementById("themeToggle");
-      let currentUrl = null;
+      const summaryMode = document.getElementById("summaryMode");
+      const settingsKey = "dxfPdfConverterSettings";
+      let currentPdfUrl = null;
+      let currentSvgUrl = null;
+      const downloadSvgLink = document.getElementById("downloadSvgLink");
 
-      function createRuleRow(rule = { match: "", color: "#000000", width: 1, dash: "solid" }) {
+      function createRuleRow(rule = { match: "", color: "#000000", width: 1, dash: "solid", include_in_total: true }) {
         const row = document.createElement("div");
         row.className = "rule-row";
         row.innerHTML = `
@@ -74,9 +93,11 @@
           <label>Color<input class="color" type="color" value="${rule.color || "#000000"}"></label>
           <label>Width<input class="width" type="number" min="0.1" step="0.1" value="${rule.width || 1}"></label>
           <label>Line<select class="dash"><option value="solid">Solid</option><option value="dashed">Dashed</option></select></label>
+          <label class="checkbox-label">Include in total<input class="include-in-total" type="checkbox"></label>
           <button class="remove" type="button">Remove</button>
         `;
         row.querySelector(".dash").value = rule.dash || "solid";
+        row.querySelector(".include-in-total").checked = rule.include_in_total !== false;
         row.querySelector(".remove").addEventListener("click", () => {
           row.remove();
           convertSelectedFile();
@@ -91,7 +112,29 @@
           color: row.querySelector(".color").value,
           width: Number(row.querySelector(".width").value) || 1,
           dash: row.querySelector(".dash").value,
+          include_in_total: row.querySelector(".include-in-total").checked,
         })).filter((rule) => rule.match.trim());
+      }
+
+      function loadSavedSettings() {
+        let saved = null;
+        try {
+          saved = JSON.parse(localStorage.getItem(settingsKey) || "null");
+        } catch {
+          saved = null;
+        }
+        if (!saved) {
+          return { rules: defaultStyles, summaryMode: "pdf-only" };
+        }
+        return {
+          rules: Array.isArray(saved.rules) ? saved.rules : defaultStyles,
+          summaryMode: saved.summaryMode === "with-summary" ? "with-summary" : "pdf-only",
+        };
+      }
+
+      function saveSettings() {
+        localStorage.setItem(settingsKey, JSON.stringify({ rules: collectRules(), summaryMode: summaryMode.value }));
+        statusText.textContent = "Settings saved.";
       }
 
       async function convertSelectedFile() {
@@ -105,21 +148,41 @@
         const formData = new FormData();
         formData.append("file", file);
         formData.append("layer_styles", JSON.stringify(collectRules()));
+        formData.append("include_summary", summaryMode.value === "with-summary" ? "true" : "false");
 
         try {
-          const response = await fetch("/convert", { method: "POST", body: formData });
-          if (!response.ok) {
-            const error = await response.json().catch(() => ({ detail: "Conversion failed" }));
-            throw new Error(error.detail || "Conversion failed");
+          const svgFormData = new FormData();
+          svgFormData.append("file", file);
+          svgFormData.append("layer_styles", JSON.stringify(collectRules()));
+
+          const [pdfResponse, svgResponse] = await Promise.all([
+            fetch("/convert", { method: "POST", body: formData }),
+            fetch("/convert-svg", { method: "POST", body: svgFormData }),
+          ]);
+
+          if (!pdfResponse.ok) {
+            const error = await pdfResponse.json().catch(() => ({ detail: "Conversion failed" }));
+            throw new Error(error.detail || "PDF conversion failed");
           }
-          const blob = await response.blob();
-          if (currentUrl) {
-            URL.revokeObjectURL(currentUrl);
-          }
-          currentUrl = URL.createObjectURL(blob);
-          pdfPreview.src = currentUrl;
-          downloadLink.href = currentUrl;
+
+          const pdfBlob = await pdfResponse.blob();
+          if (currentPdfUrl) URL.revokeObjectURL(currentPdfUrl);
+          currentPdfUrl = URL.createObjectURL(pdfBlob);
+          pdfPreview.src = currentPdfUrl;
+          downloadLink.href = currentPdfUrl;
           downloadLink.download = file.name.replace(/\.dxf$/i, ".pdf");
+
+          if (svgResponse.ok) {
+            const svgBlob = await svgResponse.blob();
+            if (currentSvgUrl) URL.revokeObjectURL(currentSvgUrl);
+            currentSvgUrl = URL.createObjectURL(svgBlob);
+            downloadSvgLink.href = currentSvgUrl;
+            downloadSvgLink.download = file.name.replace(/\.dxf$/i, ".svg");
+            downloadSvgLink.hidden = false;
+          } else {
+            downloadSvgLink.hidden = true;
+          }
+
           previewPanel.hidden = false;
           statusText.textContent = "Ready. Preview updated.";
         } catch (error) {
@@ -156,9 +219,13 @@
         }
       });
 
-      defaultStyles.forEach(createRuleRow);
+      const savedSettings = loadSavedSettings();
+      summaryMode.value = savedSettings.summaryMode;
+      savedSettings.rules.forEach(createRuleRow);
       fileInput.addEventListener("change", convertSelectedFile);
+      summaryMode.addEventListener("change", convertSelectedFile);
       addRuleButton.addEventListener("click", () => createRuleRow());
+      saveSettingsButton.addEventListener("click", saveSettings);
       themeToggle.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
       applyTheme(localStorage.getItem("theme") || "light");
     </script>

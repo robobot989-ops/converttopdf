@@ -4,3 +4,8 @@ __pycache__/
 *.py[cod]
 converted_files/*
 !converted_files/.gitkeep
+test_output.pdf
+test_output.svg
+RE_79418.pdf
+RE_79418_1.pdf
+SF_85757.pdf

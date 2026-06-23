@@ -18,6 +18,17 @@ uvicorn app.main:app --reload
 
 Open http://127.0.0.1:8000 and choose a `.dxf` file. Conversion starts automatically and the PDF preview appears in the browser.
 
+The generated PDF keeps the drawing scale instead of forcing the content into A4. The page size is derived from the DXF bounds and the file units.
+
+PDF output modes:
+
+- `PDF only`: drawing only.
+- `PDF + summary`: drawing and compact length summary on the same PDF page.
+
+DXF layers with drawable content are exported as PDF optional content groups. Empty DXF layers are not exported. Summary lengths are shown in millimeters, including whether each layer is counted in the total.
+
+Adobe Acrobat and other PDF viewers can display these optional content groups as PDF layers. Adobe Illustrator may still import a standard layered PDF as a single Illustrator layer because Illustrator layers and PDF optional content groups are different mechanisms.
+
 ## UI Features
 
 - Automatic conversion after file selection
