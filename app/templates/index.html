@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DXF to PDF Converter</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel hero">
+        <div class="topbar">
+          <p class="eyebrow">Local CAD utility</p>
+          <button class="theme-toggle" type="button" id="themeToggle">Dark theme</button>
+        </div>
+
+        <h1>DXF to PDF</h1>
+        <p class="lead">Choose a DXF file. Conversion starts automatically, then the PDF preview and download link appear below.</p>
+
+        <div class="drop-zone" id="dropZone">
+          <span class="drop-label">Drop DXF here or click to browse</span>
+          <input type="file" id="fileInput" accept=".dxf">
+        </div>
+        <p class="status" id="status">Waiting for a DXF file.</p>
+      </section>
+
+      <section class="panel preview-panel" id="previewPanel" hidden>
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Preview</p>
+            <h2>Converted PDF</h2>
+          </div>
+          <a class="download" id="downloadLink" href="#" download>Download PDF</a>
+        </div>
+        <iframe id="pdfPreview" title="PDF preview"></iframe>
+      </section>
+
+      <details class="panel settings">
+        <summary>
+          <span>
+            <span class="eyebrow">Layer styles</span>
+            <strong>Editable rules</strong>
+          </span>
+          <span class="summary-hint">Open settings</span>
+        </summary>
+
+        <div class="settings-body">
+          <div class="section-title compact">
+            <p class="note">Rule matching is case-insensitive and checks whether the layer name contains the text in the Match field.</p>
+            <button type="button" id="addRule">Add rule</button>
+          </div>
+          <div class="rules" id="rules"></div>
+        </div>
+      </details>
+    </main>
+
+    <script>
+      const defaultStyles = {{ default_styles | tojson }};
+      const fileInput = document.getElementById("fileInput");
+      const rules = document.getElementById("rules");
+      const statusText = document.getElementById("status");
+      const previewPanel = document.getElementById("previewPanel");
+      const pdfPreview = document.getElementById("pdfPreview");
+      const downloadLink = document.getElementById("downloadLink");
+      const addRuleButton = document.getElementById("addRule");
+      const themeToggle = document.getElementById("themeToggle");
+      let currentUrl = null;
+
+      function createRuleRow(rule = { match: "", color: "#000000", width: 1, dash: "solid" }) {
+        const row = document.createElement("div");
+        row.className = "rule-row";
+        row.innerHTML = `
+          <label>Match<input class="match" type="text" value="${rule.match || ""}"></label>
+          <label>Color<input class="color" type="color" value="${rule.color || "#000000"}"></label>
+          <label>Width<input class="width" type="number" min="0.1" step="0.1" value="${rule.width || 1}"></label>
+          <label>Line<select class="dash"><option value="solid">Solid</option><option value="dashed">Dashed</option></select></label>
+          <button class="remove" type="button">Remove</button>
+        `;
+        row.querySelector(".dash").value = rule.dash || "solid";
+        row.querySelector(".remove").addEventListener("click", () => {
+          row.remove();
+          convertSelectedFile();
+        });
+        row.querySelectorAll("input, select").forEach((input) => input.addEventListener("change", convertSelectedFile));
+        rules.appendChild(row);
+      }
+
+      function collectRules() {
+        return [...rules.querySelectorAll(".rule-row")].map((row) => ({
+          match: row.querySelector(".match").value,
+          color: row.querySelector(".color").value,
+          width: Number(row.querySelector(".width").value) || 1,
+          dash: row.querySelector(".dash").value,
+        })).filter((rule) => rule.match.trim());
+      }
+
+      async function convertSelectedFile() {
+        const file = fileInput.files[0];
+        if (!file) {
+          return;
+        }
+
+        statusText.textContent = "Converting...";
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("layer_styles", JSON.stringify(collectRules()));
+
+        try {
+          const response = await fetch("/convert", { method: "POST", body: formData });
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: "Conversion failed" }));
+            throw new Error(error.detail || "Conversion failed");
+          }
+          const blob = await response.blob();
+          if (currentUrl) {
+            URL.revokeObjectURL(currentUrl);
+          }
+          currentUrl = URL.createObjectURL(blob);
+          pdfPreview.src = currentUrl;
+          downloadLink.href = currentUrl;
+          downloadLink.download = file.name.replace(/\.dxf$/i, ".pdf");
+          previewPanel.hidden = false;
+          statusText.textContent = "Ready. Preview updated.";
+        } catch (error) {
+          statusText.textContent = error.message;
+        }
+      }
+
+      function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        themeToggle.textContent = theme === "dark" ? "Light theme" : "Dark theme";
+        localStorage.setItem("theme", theme);
+      }
+
+      const dropZone = document.getElementById("dropZone");
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+      });
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.toLowerCase().endsWith(".dxf")) {
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          fileInput.files = dt.files;
+          convertSelectedFile();
+        }
+      });
+
+      defaultStyles.forEach(createRuleRow);
+      fileInput.addEventListener("change", convertSelectedFile);
+      addRuleButton.addEventListener("click", () => createRuleRow());
+      themeToggle.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+      applyTheme(localStorage.getItem("theme") || "light");
+    </script>
+  </body>
+</html>
