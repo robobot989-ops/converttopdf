@@ -72,6 +72,22 @@
       </details>
     </main>
 
+    <div class="gallery-overlay" id="galleryOverlay" hidden>
+      <div class="gallery-backdrop" id="galleryBackdrop"></div>
+      <div class="gallery-panel">
+        <div class="gallery-header">
+          <span class="gallery-name" id="galleryName"></span>
+          <button class="gallery-close" id="galleryClose">&times;</button>
+        </div>
+        <div class="gallery-body">
+          <button class="gallery-nav gallery-prev" id="galleryPrev">&lsaquo;</button>
+          <iframe class="gallery-frame" id="galleryFrame"></iframe>
+          <button class="gallery-nav gallery-next" id="galleryNext">&rsaquo;</button>
+        </div>
+        <div class="gallery-counter" id="galleryCounter"></div>
+      </div>
+    </div>
+
     <script>
       const defaultStyles = {{ default_styles | tojson }};
 
@@ -386,12 +402,53 @@
         localStorage.setItem("theme", theme);
       }
 
+      let galleryItems = [];
+      let galleryIndex = 0;
+
+      function openGallery(index) {
+        galleryIndex = index;
+        updateGallery();
+        document.getElementById("galleryOverlay").hidden = false;
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeGallery() {
+        document.getElementById("galleryOverlay").hidden = true;
+        document.getElementById("galleryFrame").src = "";
+        document.body.style.overflow = "";
+      }
+
+      function updateGallery() {
+        const item = galleryItems[galleryIndex];
+        if (!item) return;
+        document.getElementById("galleryName").textContent = `${item.name} (${item.version})`;
+        document.getElementById("galleryFrame").src = item.svg || item.pdf;
+        document.getElementById("galleryCounter").textContent = `${galleryIndex + 1} / ${galleryItems.length}`;
+        document.getElementById("galleryPrev").style.visibility = galleryIndex > 0 ? "visible" : "hidden";
+        document.getElementById("galleryNext").style.visibility = galleryIndex < galleryItems.length - 1 ? "visible" : "hidden";
+      }
+
+      function galleryPrev() { if (galleryIndex > 0) { galleryIndex--; updateGallery(); } }
+      function galleryNext() { if (galleryIndex < galleryItems.length - 1) { galleryIndex++; updateGallery(); } }
+
+      document.getElementById("galleryClose").addEventListener("click", closeGallery);
+      document.getElementById("galleryBackdrop").addEventListener("click", closeGallery);
+      document.getElementById("galleryPrev").addEventListener("click", galleryPrev);
+      document.getElementById("galleryNext").addEventListener("click", galleryNext);
+      document.addEventListener("keydown", (e) => {
+        if (document.getElementById("galleryOverlay").hidden) return;
+        if (e.key === "Escape") closeGallery();
+        if (e.key === "ArrowLeft") galleryPrev();
+        if (e.key === "ArrowRight") galleryNext();
+      });
+
       async function loadArchive() {
         archiveList.innerHTML = `<div class="archive-loading">${t("loading")}</div>`;
         try {
           const resp = await fetch("/api/conversions");
           const data = await resp.json();
-          renderArchive(data.items || []);
+          galleryItems = data.items || [];
+          renderArchive(galleryItems);
         } catch {
           archiveList.innerHTML = `<div class="archive-empty">${t("archiveEmpty")}</div>`;
         }
@@ -402,9 +459,9 @@
           archiveList.innerHTML = `<div class="archive-empty">${t("archiveEmpty")}</div>`;
           return;
         }
-        archiveList.innerHTML = items.map(item => `
+        archiveList.innerHTML = items.map((item, i) => `
           <div class="archive-item">
-            ${item.thumb ? `<a href="${item.svg || item.pdf}" target="_blank"><img class="archive-thumb" src="${item.thumb}" alt="" loading="lazy"></a>` : ''}
+            ${item.thumb ? `<img class="archive-thumb" src="${item.thumb}" alt="" loading="lazy" data-index="${i}">` : ''}
             <div class="archive-info">
               <span class="archive-name" title="${item.name}">${item.name}</span>
               <span class="archive-meta">
@@ -419,6 +476,9 @@
             </div>
           </div>
         `).join("");
+        archiveList.querySelectorAll(".archive-thumb").forEach((img) => {
+          img.addEventListener("click", () => openGallery(parseInt(img.dataset.index)));
+        });
       }
 
       function formatSize(bytes) {
