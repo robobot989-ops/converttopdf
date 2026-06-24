@@ -12,6 +12,7 @@
         <div class="topbar">
           <p class="eyebrow" data-i18n="eyebrow">Local CAD utility</p>
           <div class="topbar-actions">
+            <a href="/settings" class="settings-link" data-i18n="settingsLink">Settings</a>
             <select id="langSelect" class="lang-select">
               <option value="en">EN</option>
               <option value="ru">RU</option>
@@ -51,29 +52,8 @@
             <a class="download svg-download" id="downloadSvgLink" href="#" download data-i18n="downloadSvg">Download SVG (Illustrator)</a>
           </div>
         </div>
-        <iframe id="pdfPreview" title="PDF preview"></iframe>
+        <iframe id="pdfPreview" title="PDF preview">        </iframe>
       </section>
-
-      <details class="panel settings">
-        <summary>
-          <span>
-            <span class="eyebrow" data-i18n="layerStyles">Layer styles</span>
-            <strong data-i18n="editableRules">Editable rules</strong>
-          </span>
-          <span class="summary-hint" data-i18n="openSettings">Open settings</span>
-        </summary>
-
-        <div class="settings-body">
-          <div class="section-title compact">
-            <p class="note" data-i18n="ruleNote">Rule matching is case-insensitive and checks whether the layer name contains the text in the Match field.</p>
-            <div class="settings-actions">
-              <button type="button" id="saveSettings" data-i18n="saveSettings">Save settings</button>
-              <button type="button" id="addRule" data-i18n="addRule">Add rule</button>
-            </div>
-          </div>
-          <div class="rules" id="rules"></div>
-        </div>
-      </details>
 
       <details class="panel archive" id="archivePanel">
         <summary>
@@ -126,6 +106,7 @@
           archiveDownloadPdf: "PDF",
           archiveDownloadSvg: "SVG",
           loading: "Loading...",
+          settingsLink: "Settings",
           layerStyles: "Layer styles",
           editableRules: "Editable rules",
           openSettings: "Open settings",
@@ -171,6 +152,7 @@
           archiveDownloadPdf: "PDF",
           archiveDownloadSvg: "SVG",
           loading: "Загрузка...",
+          settingsLink: "Настройки",
           layerStyles: "Стили слоёв",
           editableRules: "Настраиваемые правила",
           openSettings: "Открыть настройки",
@@ -216,6 +198,7 @@
           archiveDownloadPdf: "PDF",
           archiveDownloadSvg: "SVG",
           loading: "Cargando...",
+          settingsLink: "Configuración",
           layerStyles: "Estilos de capas",
           editableRules: "Reglas editables",
           openSettings: "Abrir configuración",
@@ -261,6 +244,7 @@
           archiveDownloadPdf: "PDF",
           archiveDownloadSvg: "SVG",
           loading: "加载中...",
+          settingsLink: "设置",
           layerStyles: "图层样式",
           editableRules: "可编辑规则",
           openSettings: "打开设置",
@@ -314,14 +298,11 @@
 
       const fileInput = document.getElementById("fileInput");
       const dropLabel = document.getElementById("dropLabel");
-      const rules = document.getElementById("rules");
       const statusText = document.getElementById("status");
       const previewPanel = document.getElementById("previewPanel");
       const pdfPreview = document.getElementById("pdfPreview");
       const downloadLink = document.getElementById("downloadLink");
       const downloadSvgLink = document.getElementById("downloadSvgLink");
-      const addRuleButton = document.getElementById("addRule");
-      const saveSettingsButton = document.getElementById("saveSettings");
       const themeToggle = document.getElementById("themeToggle");
       const summaryMode = document.getElementById("summaryMode");
       const langSelect = document.getElementById("langSelect");
@@ -331,56 +312,14 @@
       let currentPdfUrl = null;
       let currentSvgUrl = null;
 
-      function createRuleRow(rule = { match: "", color: "#000000", width: 1, dash: "solid", include_in_total: true }) {
-        const row = document.createElement("div");
-        row.className = "rule-row";
-        row.innerHTML = `
-          <label><span class="match-label">${t("match")}</span><input class="match" type="text" value="${rule.match || ""}"></label>
-          <label><span class="color-label">${t("color")}</span><input class="color" type="color" value="${rule.color || "#000000"}"></label>
-          <label><span class="width-label">${t("width")}</span><input class="width" type="number" min="0.1" step="0.1" value="${rule.width || 1}"></label>
-          <label><span class="line-label">${t("line")}</span><select class="dash"><option value="solid">${t("solid")}</option><option value="dashed">${t("dashed")}</option></select></label>
-          <label class="checkbox-label"><span class="include-label">${t("includeInTotal")}</span><input class="include-in-total" type="checkbox"></label>
-          <button class="remove" type="button">${t("remove")}</button>
-        `;
-        row.querySelector(".dash").value = rule.dash || "solid";
-        row.querySelector(".include-in-total").checked = rule.include_in_total !== false;
-        row.querySelector(".remove").addEventListener("click", () => {
-          row.remove();
-          convertSelectedFile();
-        });
-        row.querySelectorAll("input, select").forEach((input) => input.addEventListener("change", convertSelectedFile));
-        rules.appendChild(row);
-      }
-
       function collectRules() {
-        return [...rules.querySelectorAll(".rule-row")].map((row) => ({
-          match: row.querySelector(".match").value,
-          color: row.querySelector(".color").value,
-          width: Number(row.querySelector(".width").value) || 1,
-          dash: row.querySelector(".dash").value,
-          include_in_total: row.querySelector(".include-in-total").checked,
-        })).filter((rule) => rule.match.trim());
-      }
-
-      function loadSavedSettings() {
-        let saved = null;
         try {
-          saved = JSON.parse(localStorage.getItem(settingsKey) || "null");
-        } catch {
-          saved = null;
-        }
-        if (!saved) {
-          return { rules: defaultStyles, summaryMode: "pdf-only" };
-        }
-        return {
-          rules: Array.isArray(saved.rules) ? saved.rules : defaultStyles,
-          summaryMode: saved.summaryMode === "with-summary" ? "with-summary" : "pdf-only",
-        };
-      }
-
-      function saveSettings() {
-        localStorage.setItem(settingsKey, JSON.stringify({ rules: collectRules(), summaryMode: summaryMode.value }));
-        statusText.textContent = t("settingsSaved");
+          const saved = JSON.parse(localStorage.getItem(settingsKey) || "null");
+          if (saved && Array.isArray(saved.rules)) {
+            return saved.rules.filter((r) => r.match?.trim());
+          }
+        } catch {}
+        return (defaultStyles || []).filter((r) => r.match?.trim());
       }
 
       async function convertSelectedFile() {
@@ -465,6 +404,7 @@
         }
         archiveList.innerHTML = items.map(item => `
           <div class="archive-item">
+            ${item.thumb ? `<img class="archive-thumb" src="${item.thumb}" alt="" loading="lazy">` : ''}
             <div class="archive-info">
               <span class="archive-name" title="${item.name}">${item.name}</span>
               <span class="archive-meta">
@@ -518,13 +458,8 @@
 
       refreshArchive.addEventListener("click", loadArchive);
 
-      const savedSettings = loadSavedSettings();
-      summaryMode.value = savedSettings.summaryMode;
-      savedSettings.rules.forEach(createRuleRow);
       fileInput.addEventListener("change", convertSelectedFile);
       summaryMode.addEventListener("change", convertSelectedFile);
-      addRuleButton.addEventListener("click", () => createRuleRow());
-      saveSettingsButton.addEventListener("click", saveSettings);
       themeToggle.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
       applyTheme(localStorage.getItem("theme") || "light");
       applyLanguage();

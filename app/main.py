@@ -11,14 +11,17 @@ from fastapi.templating import Jinja2Templates
 from .converter import convert_dxf_to_pdf
 from .svg_export import convert_dxf_to_svg
 from .layer_styles import DEFAULT_LAYER_STYLES
+from .thumbnails import get_or_create_thumbnail
 
 
 ROOT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = ROOT_DIR.parent
 STORAGE_DIR = PROJECT_DIR / "converted_files"
+THUMB_DIR = PROJECT_DIR / "thumbnails"
 
 app = FastAPI(title="DXF to PDF Converter")
 app.mount("/static", StaticFiles(directory=ROOT_DIR / "static"), name="static")
+app.mount("/thumbs", StaticFiles(directory=THUMB_DIR), name="thumbs")
 templates = Jinja2Templates(directory=ROOT_DIR / "templates")
 
 
@@ -54,11 +57,13 @@ def list_conversions() -> list[dict]:
             dxf = version_dir / drawing_dir.name
             if pdf.exists():
                 stat = pdf.stat()
+                thumb = get_or_create_thumbnail(pdf, THUMB_DIR)
                 items.append({
                     "name": drawing_dir.name,
                     "version": version_dir.name,
                     "pdf": f"/archive/{drawing_dir.name}/{version_dir.name}/{pdf.name}",
                     "svg": f"/archive/{drawing_dir.name}/{version_dir.name}/{svg.name}" if svg.exists() else None,
+                    "thumb": f"/thumbs/{thumb.name}" if thumb else None,
                     "size": stat.st_size,
                     "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
                 })
@@ -78,6 +83,11 @@ async def serve_archive(drawing: str, version: str, filename: str) -> FileRespon
 @app.get("/api/conversions")
 async def api_conversions():
     return {"items": list_conversions()}
+
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("settings.html", {"request": request, "default_styles": DEFAULT_LAYER_STYLES})
 
 
 @app.get("/", response_class=HTMLResponse)
