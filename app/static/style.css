@@ -503,9 +503,13 @@ details[open] .summary-hint {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
+}
+
+.gallery-overlay.open {
+  display: flex;
 }
 
 .gallery-backdrop {

@@ -72,7 +72,7 @@
       </details>
     </main>
 
-    <div class="gallery-overlay" id="galleryOverlay" hidden>
+    <div class="gallery-overlay" id="galleryOverlay">
       <div class="gallery-backdrop" id="galleryBackdrop"></div>
       <div class="gallery-panel">
         <div class="gallery-header">
@@ -408,12 +408,12 @@
       function openGallery(index) {
         galleryIndex = index;
         updateGallery();
-        document.getElementById("galleryOverlay").hidden = false;
+        document.getElementById("galleryOverlay").classList.add("open");
         document.body.style.overflow = "hidden";
       }
 
       function closeGallery() {
-        document.getElementById("galleryOverlay").hidden = true;
+        document.getElementById("galleryOverlay").classList.remove("open");
         document.getElementById("galleryFrame").src = "";
         document.body.style.overflow = "";
       }
@@ -436,7 +436,7 @@
       document.getElementById("galleryPrev").addEventListener("click", galleryPrev);
       document.getElementById("galleryNext").addEventListener("click", galleryNext);
       document.addEventListener("keydown", (e) => {
-        if (document.getElementById("galleryOverlay").hidden) return;
+        if (!document.getElementById("galleryOverlay").classList.contains("open")) return;
         if (e.key === "Escape") closeGallery();
         if (e.key === "ArrowLeft") galleryPrev();
         if (e.key === "ArrowRight") galleryNext();
