@@ -32,7 +32,8 @@
           <input type="file" id="fileInput" accept=".dxf">
         </div>
         <div class="conversion-options">
-          <label data-i18n="outputMode">Output mode
+          <label>
+            <span data-i18n="outputMode">Output mode</span>
             <select id="summaryMode">
               <option value="pdf-only" data-i18n="pdfOnly">PDF only</option>
               <option value="with-summary" data-i18n="pdfSummary">PDF + summary</option>
@@ -299,9 +300,7 @@
           if (key === "themeToggle") {
             const isDark = document.documentElement.dataset.theme === "dark";
             el.textContent = isDark ? t("themeToggle_light") : t("themeToggle_dark");
-          } else if (el.tagName === "OPTION") {
-            el.textContent = t(key);
-          } else {
+          } else if (el.tagName === "OPTION" || el.children.length === 0) {
             el.textContent = t(key);
           }
         });
