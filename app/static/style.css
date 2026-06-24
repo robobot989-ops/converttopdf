@@ -645,11 +645,18 @@ details[open] .summary-hint {
   display: grid;
   place-items: center;
   min-height: auto;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .gallery-nav:hover {
   background: var(--accent);
   color: white;
+}
+
+.gallery-nav.disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
 }
 
 .gallery-counter {
