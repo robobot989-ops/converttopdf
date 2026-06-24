@@ -77,7 +77,11 @@ async def serve_archive(drawing: str, version: str, filename: str) -> FileRespon
     if not path.exists() or not path.is_relative_to(STORAGE_DIR):
         raise HTTPException(status_code=404, detail="Not found")
     media_type = "application/pdf" if filename.endswith(".pdf") else "image/svg+xml"
-    return FileResponse(path, media_type=media_type, filename=filename)
+    return FileResponse(
+        path,
+        media_type=media_type,
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
 
 
 @app.get("/api/conversions")
