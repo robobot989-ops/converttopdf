@@ -53,8 +53,8 @@
             <a class="download svg-download" id="downloadSvgLink" href="#" download data-i18n="downloadSvg">Download SVG (Illustrator)</a>
           </div>
         </div>
-        <img id="svgPreview" class="preview-image" alt="">
-        <iframe id="pdfPreview" hidden></iframe>
+        <div id="svgContainer" class="preview-svg-container" hidden></div>
+        <iframe id="pdfPreview" class="preview-iframe" hidden></iframe>
       </section>
 
       <details class="panel archive" id="archivePanel">
@@ -89,7 +89,7 @@
         </div>
         <div class="gallery-body">
           <button class="gallery-nav gallery-prev" id="galleryPrev">&lsaquo;</button>
-          <img class="gallery-frame" id="galleryFrameSvg" alt="" hidden>
+          <div class="gallery-frame gallery-svg-frame" id="galleryFrameSvg" hidden></div>
           <iframe class="gallery-frame" id="galleryFramePdf" hidden></iframe>
           <button class="gallery-nav gallery-next" id="galleryNext">&rsaquo;</button>
         </div>
@@ -384,23 +384,30 @@
           downloadLink.href = currentPdfUrl;
           downloadLink.download = file.name.replace(/\.dxf$/i, ".pdf");
 
-          const svgPreview = document.getElementById("svgPreview");
+          const svgContainer = document.getElementById("svgContainer");
           const pdfPreview = document.getElementById("pdfPreview");
 
           if (svgResponse.ok) {
-            const svgBlob = await svgResponse.blob();
-            if (currentSvgUrl) URL.revokeObjectURL(currentSvgUrl);
-            currentSvgUrl = URL.createObjectURL(svgBlob);
-            svgPreview.hidden = false;
+            const svgText = await svgResponse.text();
             pdfPreview.hidden = true;
             pdfPreview.src = "";
-            svgPreview.src = currentSvgUrl;
+            svgContainer.hidden = false;
+            svgContainer.innerHTML = svgText;
+            const svgEl = svgContainer.querySelector("svg");
+            if (svgEl) {
+              svgEl.removeAttribute("width");
+              svgEl.removeAttribute("height");
+              svgEl.style.width = "100%";
+              svgEl.style.height = "100%";
+            }
+            if (currentSvgUrl) URL.revokeObjectURL(currentSvgUrl);
+            currentSvgUrl = URL.createObjectURL(new Blob([svgText], { type: "image/svg+xml" }));
             downloadSvgLink.href = currentSvgUrl;
             downloadSvgLink.download = file.name.replace(/\.dxf$/i, ".svg");
             downloadSvgLink.hidden = false;
           } else {
-            svgPreview.hidden = true;
-            svgPreview.src = "";
+            svgContainer.hidden = true;
+            svgContainer.innerHTML = "";
             pdfPreview.hidden = false;
             pdfPreview.src = currentPdfUrl;
             downloadSvgLink.hidden = true;
@@ -433,7 +440,7 @@
 
       function closeGallery() {
         document.getElementById("galleryOverlay").classList.remove("open");
-        document.getElementById("galleryFrameSvg").src = "";
+        document.getElementById("galleryFrameSvg").innerHTML = "";
         document.getElementById("galleryFramePdf").src = "";
         document.body.style.overflow = "";
       }
@@ -459,11 +466,22 @@
           frameSvg.hidden = false;
           framePdf.hidden = true;
           framePdf.src = "";
-          frameSvg.src = item.svg;
+          fetch(item.svg)
+            .then(r => r.text())
+            .then(svgText => {
+              frameSvg.innerHTML = svgText;
+              const svgEl = frameSvg.querySelector("svg");
+              if (svgEl) {
+                svgEl.removeAttribute("width");
+                svgEl.removeAttribute("height");
+                svgEl.style.width = "100%";
+                svgEl.style.height = "100%";
+              }
+            });
         } else {
           framePdf.hidden = false;
           frameSvg.hidden = true;
-          frameSvg.src = "";
+          frameSvg.innerHTML = "";
           framePdf.src = item.pdf + "#view=FitH";
         }
 
