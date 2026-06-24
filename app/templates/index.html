@@ -53,7 +53,8 @@
             <a class="download svg-download" id="downloadSvgLink" href="#" download data-i18n="downloadSvg">Download SVG (Illustrator)</a>
           </div>
         </div>
-        <iframe id="pdfPreview" title="PDF preview">        </iframe>
+        <embed id="svgPreview" class="preview-embed" type="image/svg+xml">
+        <iframe id="pdfPreview" hidden></iframe>
       </section>
 
       <details class="panel archive" id="archivePanel">
@@ -380,18 +381,28 @@
           const pdfBlob = await pdfResponse.blob();
           if (currentPdfUrl) URL.revokeObjectURL(currentPdfUrl);
           currentPdfUrl = URL.createObjectURL(pdfBlob);
-          pdfPreview.src = currentPdfUrl;
           downloadLink.href = currentPdfUrl;
           downloadLink.download = file.name.replace(/\.dxf$/i, ".pdf");
+
+          const svgPreview = document.getElementById("svgPreview");
+          const pdfPreview = document.getElementById("pdfPreview");
 
           if (svgResponse.ok) {
             const svgBlob = await svgResponse.blob();
             if (currentSvgUrl) URL.revokeObjectURL(currentSvgUrl);
             currentSvgUrl = URL.createObjectURL(svgBlob);
+            svgPreview.hidden = false;
+            pdfPreview.hidden = true;
+            pdfPreview.src = "";
+            svgPreview.src = currentSvgUrl;
             downloadSvgLink.href = currentSvgUrl;
             downloadSvgLink.download = file.name.replace(/\.dxf$/i, ".svg");
             downloadSvgLink.hidden = false;
           } else {
+            svgPreview.hidden = true;
+            svgPreview.src = "";
+            pdfPreview.hidden = false;
+            pdfPreview.src = currentPdfUrl;
             downloadSvgLink.hidden = true;
           }
 

@@ -497,6 +497,15 @@ details[open] .summary-hint {
   background: white;
 }
 
+.preview-embed {
+  width: 100%;
+  height: min(72vh, 760px);
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+}
+
 /* === Gallery overlay === */
 
 .gallery-overlay {
