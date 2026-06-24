@@ -401,6 +401,17 @@ details[open] .summary-hint {
   border: 1px solid var(--line);
   background: white;
   flex-shrink: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+a > .archive-thumb {
+  cursor: pointer;
+}
+
+a > .archive-thumb:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  border-color: var(--accent);
 }
 
 .archive-name {

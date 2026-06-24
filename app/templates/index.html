@@ -404,7 +404,7 @@
         }
         archiveList.innerHTML = items.map(item => `
           <div class="archive-item">
-            ${item.thumb ? `<img class="archive-thumb" src="${item.thumb}" alt="" loading="lazy">` : ''}
+            ${item.thumb ? `<a href="${item.svg || item.pdf}" target="_blank"><img class="archive-thumb" src="${item.thumb}" alt="" loading="lazy"></a>` : ''}
             <div class="archive-info">
               <span class="archive-name" title="${item.name}">${item.name}</span>
               <span class="archive-meta">
