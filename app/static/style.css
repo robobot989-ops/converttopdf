@@ -183,6 +183,30 @@ button:hover,
   white-space: nowrap;
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.lang-select {
+  min-height: 44px;
+  min-width: 72px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--button);
+  color: var(--button-text);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.lang-select:hover {
+  background: var(--accent);
+  color: white;
+}
+
 .settings,
 .preview-panel {
   padding: clamp(22px, 4vw, 34px);

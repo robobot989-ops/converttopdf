@@ -1,60 +1,137 @@
-# DXF to PDF Converter
+# DXF to PDF / SVG Converter
 
-Local web service for converting a single DXF drawing into a vector PDF.
+Local web service for converting DXF drawings to PDF (with scale preservation and layer support) and SVG (for Adobe Illustrator).
 
-## Setup
+## Features
+
+- **Scale preservation** — PDF page size matches the DXF drawing dimensions, not forced to A4
+- **PDF layers (OCG)** — DXF layers exported as Optional Content Groups, visible in Adobe Acrobat and other PDF viewers
+- **SVG with layers** — DXF layers exported as Inkscape-compatible `<g>` groups, recognized as layers by Adobe Illustrator
+- **Length summary** — optional per-layer and total length report (in mm) on the same page as the drawing
+- **Layer style rules** — customizable color, width, dash style per layer via the web UI
+- **Include in total** — per-rule toggle to control which layers contribute to the summary total
+- **Multi-language UI** — English, Russian, Spanish, Chinese
+- **Light/dark theme** — toggle in the browser
+- **Settings persistence** — rules and preferences saved in `localStorage`
+- **Versioned output** — each conversion saved in `converted_files/<name>/v001/`, `v002/`, ...
+
+## Quick start
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate        # Linux / macOS
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Open http://127.0.0.1:8000 in your browser.
+
+### Windows
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### macOS / Linux
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-## Run
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000 and choose a `.dxf` file. Conversion starts automatically and the PDF preview appears in the browser.
+### Docker (optional)
 
-The generated PDF keeps the drawing scale instead of forcing the content into A4. The page size is derived from the DXF bounds and the file units.
+```bash
+docker build -t dxf-converter .
+docker run -p 8000:8000 dxf-converter
+```
 
-PDF output modes:
+## Usage
 
-- `PDF only`: drawing only.
-- `PDF + summary`: drawing and compact length summary on the same PDF page.
+1. Open the web interface at http://127.0.0.1:8000
+2. Drag and drop a `.dxf` file or click the upload area
+3. Conversion starts automatically
+4. Preview the PDF in the browser
+5. Download PDF or SVG
 
-DXF layers with drawable content are exported as PDF optional content groups. Empty DXF layers are not exported. Summary lengths are shown in millimeters, including whether each layer is counted in the total.
+### Output modes
 
-Adobe Acrobat and other PDF viewers can display these optional content groups as PDF layers. Adobe Illustrator may still import a standard layered PDF as a single Illustrator layer because Illustrator layers and PDF optional content groups are different mechanisms.
+| Mode | Description |
+|------|-------------|
+| **PDF only** | Drawing only |
+| **PDF + summary** | Drawing with compact length summary on the same page |
 
-## UI Features
+### SVG for Illustrator
 
-- Automatic conversion after file selection
-- PDF preview before download
-- Light/dark theme switcher
-- Editable layer style rules in the web interface
-- Saved DXF/PDF conversion versions in `converted_files/`
-- PDF length summary by layer and total length excluding `board`, `text`, and `0` layers
+Click **Download SVG (Illustrator)** to get an SVG file where each DXF layer becomes a separate `<g>` group with Inkscape layer attributes. Adobe Illustrator CC 23.0+ opens these as individual layers.
 
-Default layer rules:
+### Layer style rules
 
-- `cut`: red, 1 pt, solid
-- `Board`: black, 0.5 pt, dashed
-- `big`: green, 1 pt, solid
-- `ric`: blue, 1 pt, solid
-- `prf`: green, 1 pt, dashed
-- `text`: gray, 0.5 pt, solid
+Open **Layer styles** settings to customize:
 
-## Supported DXF Entities
+- **Match** — layer name substring (case-insensitive)
+- **Color** — stroke color
+- **Width** — stroke width in pt
+- **Line** — solid or dashed
+- **Include in total** — whether this layer is counted in the summary total
 
-- `LINE`
-- `ARC`
-- `CIRCLE`
-- `LWPOLYLINE`
-- `POLYLINE`
-- `TEXT`
-- `MTEXT`
+Click **Save settings** to persist rules in the browser.
 
-The service uses only free Python dependencies: FastAPI, ezdxf, and PyMuPDF.
+## Architecture
+
+```
+app/
+  main.py            FastAPI routes (/convert, /convert-svg)
+  converter.py       DXF → PDF conversion with OCG layers
+  svg_export.py      DXF → SVG conversion with layer groups
+  geometry.py        Bounds calculation, coordinate conversion
+  stats.py           Length statistics, summary drawing
+  layer_styles.py    Rule parsing, default styles, ACAD colors
+  constants.py       Page dimensions, unit conversion tables
+  templates/
+    index.html       Web UI with i18n (EN/RU/ES/ZH)
+  static/
+    style.css        Light/dark theme styles
+```
+
+## Supported DXF entities
+
+| Entity | Description |
+|--------|-------------|
+| `LINE` | Straight line |
+| `ARC` | Arc segment |
+| `CIRCLE` | Circle |
+| `LWPOLYLINE` | Lightweight polyline |
+| `POLYLINE` | Polyline |
+| `TEXT` | Single-line text |
+| `MTEXT` | Multi-line text |
+
+## DXF units
+
+The converter reads `$INSUNITS` from the DXF header:
+
+| Code | Unit | Scale |
+|------|------|-------|
+| 0 | Unitless | 1 (mm assumed) |
+| 1 | Inches | 25.4 |
+| 4 | Millimeters | 1 |
+| 5 | Centimeters | 10 |
+| 6 | Meters | 1000 |
+
+## Dependencies
+
+- **FastAPI** — web framework
+- **uvicorn** — ASGI server
+- **ezdxf** — DXF parsing
+- **PyMuPDF (fitz)** — PDF generation with OCG layers
+- **Jinja2** — HTML templating
+- **python-multipart** — file upload support
+
+## License
+
+MIT
