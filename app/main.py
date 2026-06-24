@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -38,6 +39,45 @@ def versioned_conversion_paths(filename: str) -> tuple[Path, Path, Path]:
                 version_dir / f"{stem}.svg",
             )
         version += 1
+
+
+def list_conversions() -> list[dict]:
+    if not STORAGE_DIR.exists():
+        return []
+    items = []
+    for drawing_dir in STORAGE_DIR.iterdir():
+        if not drawing_dir.is_dir():
+            continue
+        for version_dir in sorted(drawing_dir.iterdir(), reverse=True):
+            pdf = version_dir / f"{drawing_dir.name}.pdf"
+            svg = version_dir / f"{drawing_dir.name}.svg"
+            dxf = version_dir / drawing_dir.name
+            if pdf.exists():
+                stat = pdf.stat()
+                items.append({
+                    "name": drawing_dir.name,
+                    "version": version_dir.name,
+                    "pdf": f"/archive/{drawing_dir.name}/{version_dir.name}/{pdf.name}",
+                    "svg": f"/archive/{drawing_dir.name}/{version_dir.name}/{svg.name}" if svg.exists() else None,
+                    "size": stat.st_size,
+                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                })
+    items.sort(key=lambda x: x["modified"], reverse=True)
+    return items
+
+
+@app.get("/archive/{drawing}/{version}/{filename}")
+async def serve_archive(drawing: str, version: str, filename: str) -> FileResponse:
+    path = STORAGE_DIR / drawing / version / filename
+    if not path.exists() or not path.is_relative_to(STORAGE_DIR):
+        raise HTTPException(status_code=404, detail="Not found")
+    media_type = "application/pdf" if filename.endswith(".pdf") else "image/svg+xml"
+    return FileResponse(path, media_type=media_type, filename=filename)
+
+
+@app.get("/api/conversions")
+async def api_conversions():
+    return {"items": list_conversions()}
 
 
 @app.get("/", response_class=HTMLResponse)

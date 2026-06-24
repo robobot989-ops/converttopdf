@@ -9,6 +9,10 @@
   --button: #111827;
   --button-text: #ffffff;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 }
 
 :root[data-theme="dark"] {
@@ -21,6 +25,10 @@
   --accent: #60a5fa;
   --button: #e5edf8;
   --button-text: #0f172a;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 }
 
 * {
@@ -67,33 +75,36 @@ body {
 .eyebrow {
   margin: 0 0 10px;
   color: var(--accent);
-  font-size: 12px;
-  font-weight: 850;
-  letter-spacing: 0.16em;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 h1,
 h2 {
   margin: 0;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.03em;
+  font-weight: var(--font-weight-bold);
 }
 
 h1 {
-  font-size: clamp(42px, 9vw, 92px);
-  line-height: 0.92;
+  font-size: clamp(28px, 6vw, 48px);
+  line-height: 1.1;
 }
 
 h2 {
-  font-size: clamp(24px, 4vw, 36px);
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.2;
 }
 
 .lead {
   max-width: 650px;
-  margin: 22px 0 32px;
+  margin: 18px 0 28px;
   color: var(--muted);
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.6;
+  font-weight: var(--font-weight-normal);
 }
 
 .drop-zone {
@@ -101,14 +112,21 @@ h2 {
   display: grid;
   place-items: center;
   gap: 14px;
-  padding: 48px 26px;
+  padding: 40px 26px;
   border: 2px dashed var(--line);
   border-radius: 20px;
   background: rgba(148, 163, 184, 0.08);
   color: var(--text);
-  font-weight: 750;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s, padding 0.2s;
+}
+
+.drop-zone.has-file {
+  padding: 20px 26px;
+  border-style: solid;
+  border-color: var(--accent);
+  background: rgba(37, 99, 235, 0.06);
 }
 
 .drop-zone:hover {
@@ -159,17 +177,17 @@ input[type="color"] {
 
 button,
 .download {
-  min-height: 44px;
+  min-height: 42px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--button);
   color: var(--button-text);
   cursor: pointer;
   display: inline-grid;
   place-items: center;
-  padding: 0 18px;
-  font-size: 14px;
-  font-weight: 800;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
 }
 
@@ -190,15 +208,15 @@ button:hover,
 }
 
 .lang-select {
-  min-height: 44px;
+  min-height: 42px;
   min-width: 72px;
   padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--button);
   color: var(--button-text);
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
 
@@ -226,17 +244,18 @@ summary::-webkit-details-marker {
   display: none;
 }
 
-summary strong {
-  display: block;
-  font-size: clamp(22px, 4vw, 34px);
-  letter-spacing: -0.04em;
-}
+  summary strong {
+    display: block;
+    font-size: clamp(18px, 3vw, 24px);
+    letter-spacing: -0.02em;
+    font-weight: var(--font-weight-semibold);
+  }
 
-.summary-hint {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 800;
-}
+  .summary-hint {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: var(--font-weight-medium);
+  }
 
 details[open] .summary-hint {
   color: var(--accent);
@@ -284,15 +303,15 @@ details[open] .summary-hint {
   width: auto;
 }
 
-label {
-  color: var(--muted);
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
+  label {
+    color: var(--muted);
+    display: grid;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
 
 .remove {
   background: transparent;
@@ -318,12 +337,110 @@ label {
   color: var(--button-text);
 }
 
-.status,
-.note {
-  margin: 18px 0 0;
+.archive-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.archive-header button {
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+.archive-list {
+  display: grid;
+  gap: 8px;
+}
+
+.archive-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.archive-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+}
+
+.archive-info {
+  min-width: 0;
+}
+
+.archive-name {
+  display: block;
+  font-weight: var(--font-weight-semibold);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.archive-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.archive-actions {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.archive-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  color: var(--button-text);
+  background: var(--button);
+  transition: background 0.15s, color 0.15s;
+}
+
+.archive-link:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.archive-link.svg {
+  background: var(--accent);
+  color: white;
+}
+
+.archive-link.svg:hover {
+  background: var(--button);
+  color: var(--button-text);
+}
+
+.archive-loading,
+.archive-empty {
+  padding: 32px;
+  text-align: center;
   color: var(--muted);
   font-size: 14px;
-  line-height: 1.6;
+}
+
+.status,
+.note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: var(--font-weight-normal);
 }
 
 iframe {
@@ -349,5 +466,14 @@ iframe {
 
   .rule-row {
     grid-template-columns: 1fr;
+  }
+
+  .archive-item {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

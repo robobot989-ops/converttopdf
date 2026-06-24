@@ -26,7 +26,7 @@
         <p class="lead" data-i18n="lead">Choose a DXF file. Conversion starts automatically, then the PDF preview and download link appear below.</p>
 
         <div class="drop-zone" id="dropZone">
-          <span class="drop-label" data-i18n="dropLabel">Drop DXF here or click to browse</span>
+          <span class="drop-label" id="dropLabel" data-i18n="dropLabel">Drop DXF here or click to browse</span>
           <input type="file" id="fileInput" accept=".dxf">
         </div>
         <div class="conversion-options">
@@ -74,6 +74,22 @@
           <div class="rules" id="rules"></div>
         </div>
       </details>
+
+      <details class="panel archive" id="archivePanel">
+        <summary>
+          <span>
+            <span class="eyebrow" data-i18n="archiveEyebrow">History</span>
+            <strong data-i18n="archiveTitle">Converted files</strong>
+          </span>
+          <span class="summary-hint" data-i18n="openArchive">Open archive</span>
+        </summary>
+        <div class="archive-body">
+          <div class="archive-header">
+            <button type="button" id="refreshArchive" data-i18n="refreshArchive">Refresh</button>
+          </div>
+          <div class="archive-list" id="archiveList"></div>
+        </div>
+      </details>
     </main>
 
     <script>
@@ -98,6 +114,18 @@
           convertedPdf: "Converted PDF",
           downloadPdf: "Download PDF",
           downloadSvg: "Download SVG (Illustrator)",
+          archiveEyebrow: "History",
+          archiveTitle: "Converted files",
+          openArchive: "Open archive",
+          refreshArchive: "Refresh",
+          archiveEmpty: "No converted files yet",
+          archiveName: "File",
+          archiveVersion: "Version",
+          archiveDate: "Date",
+          archiveSize: "Size",
+          archiveDownloadPdf: "PDF",
+          archiveDownloadSvg: "SVG",
+          loading: "Loading...",
           layerStyles: "Layer styles",
           editableRules: "Editable rules",
           openSettings: "Open settings",
@@ -131,6 +159,18 @@
           convertedPdf: "Сконвертированный PDF",
           downloadPdf: "Скачать PDF",
           downloadSvg: "Скачать SVG (Illustrator)",
+          archiveEyebrow: "История",
+          archiveTitle: "Конвертированные файлы",
+          openArchive: "Открыть архив",
+          refreshArchive: "Обновить",
+          archiveEmpty: "Пока нет конвертированных файлов",
+          archiveName: "Файл",
+          archiveVersion: "Версия",
+          archiveDate: "Дата",
+          archiveSize: "Размер",
+          archiveDownloadPdf: "PDF",
+          archiveDownloadSvg: "SVG",
+          loading: "Загрузка...",
           layerStyles: "Стили слоёв",
           editableRules: "Настраиваемые правила",
           openSettings: "Открыть настройки",
@@ -164,6 +204,18 @@
           convertedPdf: "PDF convertido",
           downloadPdf: "Descargar PDF",
           downloadSvg: "Descargar SVG (Illustrator)",
+          archiveEyebrow: "Historial",
+          archiveTitle: "Archivos convertidos",
+          openArchive: "Abrir archivo",
+          refreshArchive: "Actualizar",
+          archiveEmpty: "Aún no hay archivos convertidos",
+          archiveName: "Archivo",
+          archiveVersion: "Versión",
+          archiveDate: "Fecha",
+          archiveSize: "Tamaño",
+          archiveDownloadPdf: "PDF",
+          archiveDownloadSvg: "SVG",
+          loading: "Cargando...",
           layerStyles: "Estilos de capas",
           editableRules: "Reglas editables",
           openSettings: "Abrir configuración",
@@ -197,6 +249,18 @@
           convertedPdf: "已转换的 PDF",
           downloadPdf: "下载 PDF",
           downloadSvg: "下载 SVG (Illustrator)",
+          archiveEyebrow: "历史",
+          archiveTitle: "已转换文件",
+          openArchive: "打开存档",
+          refreshArchive: "刷新",
+          archiveEmpty: "暂无已转换文件",
+          archiveName: "文件",
+          archiveVersion: "版本",
+          archiveDate: "日期",
+          archiveSize: "大小",
+          archiveDownloadPdf: "PDF",
+          archiveDownloadSvg: "SVG",
+          loading: "加载中...",
           layerStyles: "图层样式",
           editableRules: "可编辑规则",
           openSettings: "打开设置",
@@ -249,6 +313,7 @@
       }
 
       const fileInput = document.getElementById("fileInput");
+      const dropLabel = document.getElementById("dropLabel");
       const rules = document.getElementById("rules");
       const statusText = document.getElementById("status");
       const previewPanel = document.getElementById("previewPanel");
@@ -260,6 +325,8 @@
       const themeToggle = document.getElementById("themeToggle");
       const summaryMode = document.getElementById("summaryMode");
       const langSelect = document.getElementById("langSelect");
+      const archiveList = document.getElementById("archiveList");
+      const refreshArchive = document.getElementById("refreshArchive");
       const settingsKey = "dxfPdfConverterSettings";
       let currentPdfUrl = null;
       let currentSvgUrl = null;
@@ -322,6 +389,9 @@
           return;
         }
 
+        dropLabel.textContent = file.name;
+        dropLabel.style.fontWeight = "800";
+        dropZone.classList.add("has-file");
         statusText.textContent = t("converting");
 
         const formData = new FormData();
@@ -364,6 +434,7 @@
 
           previewPanel.hidden = false;
           statusText.textContent = t("ready");
+          previewPanel.scrollIntoView({ behavior: "smooth", block: "start" });
         } catch (error) {
           statusText.textContent = error.message;
         }
@@ -374,6 +445,46 @@
         const key = theme === "dark" ? "themeToggle_light" : "themeToggle_dark";
         themeToggle.textContent = t(key);
         localStorage.setItem("theme", theme);
+      }
+
+      async function loadArchive() {
+        archiveList.innerHTML = `<div class="archive-loading">${t("loading")}</div>`;
+        try {
+          const resp = await fetch("/api/conversions");
+          const data = await resp.json();
+          renderArchive(data.items || []);
+        } catch {
+          archiveList.innerHTML = `<div class="archive-empty">${t("archiveEmpty")}</div>`;
+        }
+      }
+
+      function renderArchive(items) {
+        if (!items.length) {
+          archiveList.innerHTML = `<div class="archive-empty">${t("archiveEmpty")}</div>`;
+          return;
+        }
+        archiveList.innerHTML = items.map(item => `
+          <div class="archive-item">
+            <div class="archive-info">
+              <span class="archive-name" title="${item.name}">${item.name}</span>
+              <span class="archive-meta">
+                <span class="archive-version">${t("archiveVersion")} ${item.version}</span>
+                <span class="archive-date">${new Date(item.modified).toLocaleString()}</span>
+                <span class="archive-size">(${formatSize(item.size)})</span>
+              </span>
+            </div>
+            <div class="archive-actions">
+              <a class="archive-link" href="${item.pdf}" target="_blank">${t("archiveDownloadPdf")}</a>
+              ${item.svg ? `<a class="archive-link svg" href="${item.svg}" target="_blank">${t("archiveDownloadSvg")}</a>` : ""}
+            </div>
+          </div>
+        `).join("");
+      }
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
       }
 
       const dropZone = document.getElementById("dropZone");
@@ -405,6 +516,8 @@
         applyLanguage();
       });
 
+      refreshArchive.addEventListener("click", loadArchive);
+
       const savedSettings = loadSavedSettings();
       summaryMode.value = savedSettings.summaryMode;
       savedSettings.rules.forEach(createRuleRow);
@@ -415,6 +528,7 @@
       themeToggle.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
       applyTheme(localStorage.getItem("theme") || "light");
       applyLanguage();
+      loadArchive();
     </script>
   </body>
 </html>
