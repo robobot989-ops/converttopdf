@@ -76,12 +76,19 @@
       <div class="gallery-backdrop" id="galleryBackdrop"></div>
       <div class="gallery-panel">
         <div class="gallery-header">
-          <span class="gallery-name" id="galleryName"></span>
+          <div class="gallery-header-left">
+            <span class="gallery-name" id="galleryName"></span>
+            <div class="gallery-downloads" id="galleryDownloads">
+              <a class="download-link pdf" id="galleryDlPdf" download>PDF</a>
+              <a class="download-link svg" id="galleryDlSvg" download>SVG</a>
+            </div>
+          </div>
           <button class="gallery-close" id="galleryClose">&times;</button>
         </div>
         <div class="gallery-body">
           <button class="gallery-nav gallery-prev" id="galleryPrev">&lsaquo;</button>
-          <iframe class="gallery-frame" id="galleryFrame"></iframe>
+          <embed class="gallery-frame" id="galleryFrameSvg" type="image/svg+xml" hidden>
+          <iframe class="gallery-frame" id="galleryFramePdf" hidden></iframe>
           <button class="gallery-nav gallery-next" id="galleryNext">&rsaquo;</button>
         </div>
         <div class="gallery-counter" id="galleryCounter"></div>
@@ -414,16 +421,42 @@
 
       function closeGallery() {
         document.getElementById("galleryOverlay").classList.remove("open");
-        document.getElementById("galleryFrame").src = "";
+        document.getElementById("galleryFrameSvg").src = "";
+        document.getElementById("galleryFramePdf").src = "";
         document.body.style.overflow = "";
       }
 
       function updateGallery() {
         const item = galleryItems[galleryIndex];
         if (!item) return;
-        document.getElementById("galleryName").textContent = `${item.name} (${item.version})`;
-        document.getElementById("galleryFrame").src = item.svg || item.pdf;
-        document.getElementById("galleryCounter").textContent = `${galleryIndex + 1} / ${galleryItems.length}`;
+        const frameSvg = document.getElementById("galleryFrameSvg");
+        const framePdf = document.getElementById("galleryFramePdf");
+        const name = document.getElementById("galleryName");
+        const counter = document.getElementById("galleryCounter");
+        const dlPdf = document.getElementById("galleryDlPdf");
+        const dlSvg = document.getElementById("galleryDlSvg");
+
+        name.textContent = `${item.name} (${item.version})`;
+        counter.textContent = `${galleryIndex + 1} / ${galleryItems.length}`;
+
+        if (item.svg) {
+          frameSvg.hidden = false;
+          framePdf.hidden = true;
+          framePdf.src = "";
+          frameSvg.src = item.svg;
+        } else {
+          framePdf.hidden = false;
+          frameSvg.hidden = true;
+          frameSvg.src = "";
+          framePdf.src = item.pdf + "#view=FitH";
+        }
+
+        dlPdf.href = item.pdf;
+        dlPdf.download = `${item.name}.pdf`;
+        dlSvg.href = item.svg || "#";
+        dlSvg.download = item.svg ? `${item.name}.svg` : "";
+        dlSvg.style.display = item.svg ? "" : "none";
+
         document.getElementById("galleryPrev").style.visibility = galleryIndex > 0 ? "visible" : "hidden";
         document.getElementById("galleryNext").style.visibility = galleryIndex < galleryItems.length - 1 ? "visible" : "hidden";
       }
