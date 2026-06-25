@@ -197,10 +197,6 @@ button:hover,
   color: white;
 }
 
-.theme-toggle {
-  white-space: nowrap;
-}
-
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -216,6 +212,13 @@ button:hover,
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   text-decoration: none;
   line-height: 1;
+  flex-shrink: 0;
+}
+
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .icon-btn:hover {
@@ -227,6 +230,7 @@ button:hover,
 .lang-icon-wrap {
   position: relative;
   display: inline-flex;
+  flex-shrink: 0;
 }
 
 .lang-select-popup {
@@ -245,11 +249,15 @@ button:hover,
   cursor: pointer;
   z-index: 100;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  display: none;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .lang-icon-wrap.open .lang-select-popup {
-  display: block;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 [data-theme="dark"] .lang-select-popup {
@@ -267,7 +275,7 @@ button:hover,
 
 .topbar-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -863,8 +871,8 @@ details[open] .summary-hint {
   }
 
   .icon-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
 
   .download-group {
