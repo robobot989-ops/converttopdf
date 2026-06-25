@@ -5,6 +5,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import ezdxf
+
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -136,8 +138,12 @@ async def convert(
 
     try:
         input_path.write_bytes(await file.read())
-        stats, mm_per_unit = convert_dxf_to_pdf(input_path, output_pdf, layer_styles, include_summary=include_summary)
-        convert_dxf_to_svg(input_path, output_svg, layer_styles)
+        try:
+            doc = ezdxf.readfile(input_path)
+        except ezdxf.DXFError as exc:
+            raise ValueError("Could not read DXF file") from exc
+        stats, mm_per_unit = convert_dxf_to_pdf(input_path, output_pdf, layer_styles, include_summary=include_summary, doc=doc)
+        convert_dxf_to_svg(input_path, output_svg, layer_styles, doc=doc)
         summary_data = stats_to_dict(stats, mm_per_unit)
         output_summary.write_text(json.dumps(summary_data, ensure_ascii=False), encoding="utf-8")
     except ValueError as exc:

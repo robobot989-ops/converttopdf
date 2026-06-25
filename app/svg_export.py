@@ -34,11 +34,13 @@ def convert_dxf_to_svg(
     input_path: Path,
     output_path: Path,
     raw_layer_styles: str | None = None,
+    doc: ezdxf.EzdxfDocument | None = None,
 ) -> None:
-    try:
-        doc = ezdxf.readfile(input_path)
-    except ezdxf.DXFError as exc:
-        raise ValueError("Could not read DXF file") from exc
+    if doc is None:
+        try:
+            doc = ezdxf.readfile(input_path)
+        except ezdxf.DXFError as exc:
+            raise ValueError("Could not read DXF file") from exc
 
     modelspace = list(doc.modelspace())
     bounds = collect_bounds(modelspace)
