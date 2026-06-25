@@ -56,6 +56,10 @@
         </div>
         <div id="svgContainer" class="preview-svg-container" hidden></div>
         <iframe id="pdfPreview" class="preview-iframe" hidden></iframe>
+        <div id="summaryContainer" class="summary-container" hidden>
+          <h3 data-i18n="summaryTitle">Layer Length Summary</h3>
+          <div id="summaryTable"></div>
+        </div>
       </section>
 
       <details class="panel archive" id="archivePanel">
@@ -147,6 +151,13 @@
           dashed: "Dashed",
           includeInTotal: "Include in total",
           remove: "Remove",
+          summaryTitle: "Layer Length Summary",
+          summaryLayer: "Layer",
+          summaryLength: "Length, mm",
+          summaryIncluded: "Included",
+          summaryTotal: "TOTAL",
+          archiveDelete: "Delete",
+          archiveConfirm: "Delete this conversion?",
         },
         ru: {
           eyebrow: "Локальная CAD-утилита",
@@ -193,6 +204,13 @@
           dashed: "Пунктир",
           includeInTotal: "Учитывать в итоге",
           remove: "Удалить",
+          summaryTitle: "Сводка длин слоёв",
+          summaryLayer: "Слой",
+          summaryLength: "Длина, мм",
+          summaryIncluded: "Учёт",
+          summaryTotal: "ИТОГО",
+          archiveDelete: "Удалить",
+          archiveConfirm: "Удалить эту конвертацию?",
         },
         es: {
           eyebrow: "Utilidad CAD local",
@@ -239,6 +257,13 @@
           dashed: "Discontinua",
           includeInTotal: "Incluir en total",
           remove: "Eliminar",
+          summaryTitle: "Resumen de longitud por capa",
+          summaryLayer: "Capa",
+          summaryLength: "Longitud, mm",
+          summaryIncluded: "Incluida",
+          summaryTotal: "TOTAL",
+          archiveDelete: "Eliminar",
+          archiveConfirm: "¿Eliminar esta conversión?",
         },
         zh: {
           eyebrow: "本地 CAD 工具",
@@ -285,6 +310,13 @@
           dashed: "虚线",
           includeInTotal: "计入总计",
           remove: "删除",
+          summaryTitle: "图层长度汇总",
+          summaryLayer: "图层",
+          summaryLength: "长度, mm",
+          summaryIncluded: "计入",
+          summaryTotal: "合计",
+          archiveDelete: "删除",
+          archiveConfirm: "删除此转换？",
         },
       };
 
@@ -377,19 +409,19 @@
             throw new Error(error.detail || "PDF conversion failed");
           }
 
-          const pdfBlob = await pdfResponse.blob();
+          const pdfData = await pdfResponse.json();
           if (currentPdfUrl) URL.revokeObjectURL(currentPdfUrl);
-          currentPdfUrl = URL.createObjectURL(pdfBlob);
+          currentPdfUrl = pdfData.pdf_url;
           downloadLink.href = currentPdfUrl;
           downloadLink.download = file.name.replace(/\.dxf$/i, ".pdf");
 
           const svgContainer = document.getElementById("svgContainer");
-          const pdfPreview = document.getElementById("pdfPreview");
+          const pdfPrev = document.getElementById("pdfPreview");
 
           if (svgResponse.ok) {
             const svgText = await svgResponse.text();
-            pdfPreview.hidden = true;
-            pdfPreview.src = "";
+            pdfPrev.hidden = true;
+            pdfPrev.src = "";
             svgContainer.hidden = false;
             svgContainer.innerHTML = svgText;
             const svgEl = svgContainer.querySelector("svg");
@@ -407,17 +439,52 @@
           } else {
             svgContainer.hidden = true;
             svgContainer.innerHTML = "";
-            pdfPreview.hidden = false;
-            pdfPreview.src = currentPdfUrl;
+            pdfPrev.hidden = false;
+            pdfPrev.src = currentPdfUrl;
             downloadSvgLink.hidden = true;
+          }
+
+          if (pdfData.summary && pdfData.summary.layers && pdfData.summary.layers.length > 0) {
+            renderSummaryTable(pdfData.summary, document.getElementById("summaryTable"));
+            document.getElementById("summaryContainer").hidden = false;
+          } else {
+            document.getElementById("summaryContainer").hidden = true;
           }
 
           previewPanel.hidden = false;
           statusText.textContent = t("ready");
           previewPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+          loadArchive();
         } catch (error) {
           statusText.textContent = error.message;
         }
+      }
+
+      function renderSummaryTable(summary, container) {
+        let html = '<table class="summary-table"><thead><tr>';
+        html += `<th>${t("summaryLayer")}</th>`;
+        html += `<th>${t("summaryLength")}</th>`;
+        html += `<th>${t("summaryIncluded")}</th>`;
+        html += '</tr></thead><tbody>';
+        for (const layer of summary.layers) {
+          html += `<tr>`;
+          html += `<td>${escapeHtml(layer.name)}</td>`;
+          html += `<td>${layer.length_mm.toFixed(2)}</td>`;
+          html += `<td>${layer.included ? 'X' : '-'}</td>`;
+          html += `</tr>`;
+        }
+        html += '</tbody><tfoot><tr>';
+        html += `<td><strong>${t("summaryTotal")}</strong></td>`;
+        html += `<td><strong>${summary.total_mm.toFixed(2)}</strong></td>`;
+        html += `<td></td>`;
+        html += '</tr></tfoot></table>';
+        container.innerHTML = html;
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
       }
 
       function applyTheme(theme) {
@@ -525,7 +592,16 @@
           archiveList.innerHTML = `<div class="archive-empty">${t("archiveEmpty")}</div>`;
           return;
         }
-        archiveList.innerHTML = items.map((item, i) => `
+        archiveList.innerHTML = items.map((item, i) => {
+          let summaryHtml = "";
+          if (item.summary && item.summary.layers && item.summary.layers.length > 0) {
+            summaryHtml = `<div class="archive-summary"><table class="summary-table compact"><thead><tr><th>${t("summaryLayer")}</th><th>${t("summaryLength")}</th><th>${t("summaryIncluded")}</th></tr></thead><tbody>`;
+            for (const layer of item.summary.layers) {
+              summaryHtml += `<tr><td>${escapeHtml(layer.name)}</td><td>${layer.length_mm.toFixed(2)}</td><td>${layer.included ? 'X' : '-'}</td></tr>`;
+            }
+            summaryHtml += `<tfoot><tr><td><strong>${t("summaryTotal")}</strong></td><td><strong>${item.summary.total_mm.toFixed(2)}</strong></td><td></td></tr></tfoot></tbody></table></div>`;
+          }
+          return `
           <div class="archive-item">
             ${item.thumb ? `<img class="archive-thumb" src="${item.thumb}" alt="" loading="lazy" data-index="${i}">` : ''}
             <div class="archive-info">
@@ -535,15 +611,26 @@
                 <span class="archive-date">${new Date(item.modified).toLocaleString()}</span>
                 <span class="archive-size">(${formatSize(item.size)})</span>
               </span>
+              ${summaryHtml}
             </div>
             <div class="archive-actions">
               <a class="archive-link" href="${item.pdf}" target="_blank">${t("archiveDownloadPdf")}</a>
               ${item.svg ? `<a class="archive-link svg" href="${item.svg}" target="_blank">${t("archiveDownloadSvg")}</a>` : ""}
+              <button class="archive-delete" data-url="${item.delete_url}" data-name="${item.name}">${t("archiveDelete")}</button>
             </div>
-          </div>
-        `).join("");
+          </div>`;
+        }).join("");
         archiveList.querySelectorAll(".archive-thumb").forEach((img) => {
           img.addEventListener("click", () => openGallery(parseInt(img.dataset.index)));
+        });
+        archiveList.querySelectorAll(".archive-delete").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            if (!confirm(t("archiveConfirm"))) return;
+            try {
+              await fetch(btn.dataset.url, { method: "DELETE" });
+              loadArchive();
+            } catch {}
+          });
         });
       }
 

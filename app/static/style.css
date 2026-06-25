@@ -463,6 +463,26 @@ details[open] .summary-hint {
   color: var(--button-text);
 }
 
+.archive-delete {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  border: 1px solid #dc3545;
+  background: transparent;
+  color: #dc3545;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  min-height: auto;
+}
+
+.archive-delete:hover {
+  background: #dc3545;
+  color: white;
+}
+
 .archive-loading,
 .archive-empty {
   padding: 32px;
@@ -523,6 +543,69 @@ details[open] .summary-hint {
   margin-top: 20px;
   border: 1px solid var(--line);
   border-radius: 18px;
+}
+
+/* === Summary table === */
+
+.summary-container {
+  margin-top: 16px;
+}
+
+.summary-container h3 {
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: "Courier New", monospace;
+  border: 2px solid var(--text);
+}
+
+.summary-table thead th {
+  background: var(--text);
+  color: var(--card);
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--text);
+}
+
+.summary-table tbody td {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+}
+
+.summary-table tbody tr:nth-child(even) {
+  background: rgba(128, 128, 128, 0.06);
+}
+
+.summary-table tfoot td {
+  padding: 6px 10px;
+  border: 1px solid var(--text);
+  border-top: 2px solid var(--text);
+  background: rgba(128, 128, 128, 0.08);
+}
+
+.summary-table.compact {
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+.summary-table.compact thead th {
+  font-size: 10px;
+  padding: 4px 8px;
+}
+
+.summary-table.compact tbody td {
+  padding: 3px 8px;
 }
 
 /* === Gallery overlay === */

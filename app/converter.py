@@ -8,7 +8,7 @@ from pathlib import Path
 from .constants import DXF_INSUNITS_TO_MM, PAGE_MARGIN, POINTS_PER_MM
 from .geometry import Bounds, collect_bounds, convert_point, iter_text_entities, text_value
 from .layer_styles import LayerStyle, entity_style, layer_include_in_total, parse_layer_styles
-from .stats import collect_stats, draw_summary, summary_height
+from .stats import ConversionStats, collect_stats, draw_summary, summary_height
 
 
 def dxf_mm_per_unit(doc: ezdxf.EzdxfDocument) -> float:
@@ -77,7 +77,7 @@ def convert_dxf_to_pdf(
     output_path: Path,
     raw_layer_styles: str | None = None,
     include_summary: bool = False,
-) -> None:
+) -> tuple[ConversionStats, float]:
     try:
         doc = ezdxf.readfile(input_path)
     except ezdxf.DXFError as exc:
@@ -124,3 +124,4 @@ def convert_dxf_to_pdf(
 
     pdf.save(output_path)
     pdf.close()
+    return stats, mm_per_unit
