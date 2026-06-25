@@ -57,6 +57,17 @@
             </select>
           </label>
         </div>
+        <div class="layer-panel" id="layerPanel" hidden>
+          <div class="layer-panel-header">
+            <span class="layer-panel-title" data-i18n="selectLayers">Select layers</span>
+            <div class="layer-panel-actions">
+              <button type="button" class="layer-btn" id="layerSelectAll" data-i18n="selectAll">Select all</button>
+              <button type="button" class="layer-btn" id="layerDeselectAll" data-i18n="deselectAll">Deselect all</button>
+            </div>
+          </div>
+          <div class="layer-list" id="layerList"></div>
+          <button type="button" class="convert-btn" id="convertBtn" data-i18n="convertBtn">Convert</button>
+        </div>
         <p class="status" id="status" data-i18n="waiting">Waiting for a DXF file.</p>
       </section>
 
@@ -178,6 +189,11 @@
           summaryTotal: "TOTAL",
           archiveDelete: "Delete",
           archiveConfirm: "Delete this conversion?",
+          selectLayers: "Select layers",
+          selectAll: "Select all",
+          deselectAll: "Deselect all",
+          convertBtn: "Convert",
+          layerCount: "entities",
         },
         ru: {
           eyebrow: "Локальная CAD-утилита",
@@ -231,6 +247,11 @@
           summaryTotal: "ИТОГО",
           archiveDelete: "Удалить",
           archiveConfirm: "Удалить эту конвертацию?",
+          selectLayers: "Выбор слоёв",
+          selectAll: "Выбрать все",
+          deselectAll: "Снять все",
+          convertBtn: "Конвертировать",
+          layerCount: "объектов",
         },
         es: {
           eyebrow: "Utilidad CAD local",
@@ -284,6 +305,11 @@
           summaryTotal: "TOTAL",
           archiveDelete: "Eliminar",
           archiveConfirm: "¿Eliminar esta conversión?",
+          selectLayers: "Seleccionar capas",
+          selectAll: "Seleccionar todo",
+          deselectAll: "Deseleccionar todo",
+          convertBtn: "Convertir",
+          layerCount: "entidades",
         },
         zh: {
           eyebrow: "本地 CAD 工具",
@@ -337,10 +363,17 @@
           summaryTotal: "合计",
           archiveDelete: "删除",
           archiveConfirm: "删除此转换？",
+          selectLayers: "选择图层",
+          selectAll: "全选",
+          deselectAll: "取消全选",
+          convertBtn: "转换",
+          layerCount: "个对象",
         },
       };
 
       let currentLang = localStorage.getItem("lang") || "en";
+      let currentFile = null;
+      let currentLayers = [];
 
       function t(key) {
         return (translations[currentLang] && translations[currentLang][key]) || translations.en[key] || key;
@@ -400,26 +433,68 @@
         return (defaultStyles || []).filter((r) => r.match?.trim());
       }
 
-      async function convertSelectedFile() {
-        const file = fileInput.files[0];
-        if (!file) {
-          return;
+      async function loadLayers(file) {
+        currentFile = file;
+        const formData = new FormData();
+        formData.append("file", file);
+        try {
+          const resp = await fetch("/api/layers", { method: "POST", body: formData });
+          if (!resp.ok) throw new Error("Failed to load layers");
+          const data = await resp.json();
+          currentLayers = data.layers || [];
+          renderLayerPanel(currentLayers);
+        } catch (err) {
+          statusText.textContent = err.message;
         }
+      }
+
+      function renderLayerPanel(layers) {
+        const layerList = document.getElementById("layerList");
+        layerList.innerHTML = layers.map((layer, i) => `
+          <label class="layer-item">
+            <input type="checkbox" checked data-layer="${escapeHtml(layer.name)}">
+            <span class="layer-name">${escapeHtml(layer.name)}</span>
+            <span class="layer-count">${layer.count} ${t("layerCount")}</span>
+          </label>
+        `).join("");
+        document.getElementById("layerPanel").hidden = false;
+      }
+
+      function getSelectedLayers() {
+        const checkboxes = document.querySelectorAll("#layerList input[type=checkbox]");
+        const selected = [];
+        checkboxes.forEach((cb) => {
+          if (cb.checked) selected.push(cb.dataset.layer);
+        });
+        return selected;
+      }
+
+      async function convertSelectedFile() {
+        const file = currentFile || fileInput.files[0];
+        if (!file) return;
 
         dropLabel.textContent = file.name;
         dropLabel.style.fontWeight = "800";
         dropZone.classList.add("has-file");
         statusText.textContent = t("converting");
 
+        const selectedLayers = getSelectedLayers();
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("layer_styles", JSON.stringify(collectRules()));
         formData.append("include_summary", summaryMode.value === "with-summary" ? "true" : "false");
+        if (selectedLayers.length > 0) {
+          formData.append("selected_layers", JSON.stringify(selectedLayers));
+        }
 
         try {
           const svgFormData = new FormData();
           svgFormData.append("file", file);
           svgFormData.append("layer_styles", JSON.stringify(collectRules()));
+          if (selectedLayers.length > 0) {
+            svgFormData.append("selected_layers", JSON.stringify(selectedLayers));
+          }
 
           const [pdfResponse, svgResponse] = await Promise.all([
             fetch("/convert", { method: "POST", body: formData }),
@@ -620,11 +695,20 @@
         archiveList.innerHTML = items.map((item, i) => {
           let summaryHtml = "";
           if (item.summary && item.summary.layers && item.summary.layers.length > 0) {
-            summaryHtml = `<div class="archive-summary"><table class="summary-table compact"><thead><tr><th>${t("summaryLayer")}</th><th>${t("summaryLength")}</th><th>${t("summaryIncluded")}</th></tr></thead><tbody>`;
+            const totalText = `${t("summaryTotal")}: ${item.summary.total_mm.toFixed(2)} mm`;
+            let tableRows = "";
             for (const layer of item.summary.layers) {
-              summaryHtml += `<tr><td>${escapeHtml(layer.name)}</td><td>${layer.length_mm.toFixed(2)}</td><td>${layer.included ? 'X' : '-'}</td></tr>`;
+              tableRows += `<tr><td>${escapeHtml(layer.name)}</td><td>${layer.length_mm.toFixed(2)}</td><td>${layer.included ? 'X' : '-'}</td></tr>`;
             }
-            summaryHtml += `<tfoot><tr><td><strong>${t("summaryTotal")}</strong></td><td><strong>${item.summary.total_mm.toFixed(2)}</strong></td><td></td></tr></tfoot></tbody></table></div>`;
+            summaryHtml = `
+              <details class="archive-summary-spoiler">
+                <summary><span class="archive-summary-total">${totalText}</span></summary>
+                <table class="summary-table compact">
+                  <thead><tr><th>${t("summaryLayer")}</th><th>${t("summaryLength")}</th><th>${t("summaryIncluded")}</th></tr></thead>
+                  <tbody>${tableRows}</tbody>
+                  <tfoot><tr><td><strong>${t("summaryTotal")}</strong></td><td><strong>${item.summary.total_mm.toFixed(2)}</strong></td><td></td></tr></tfoot>
+                </table>
+              </details>`;
           }
           return `
           <div class="archive-item">
@@ -684,7 +768,10 @@
           const dt = new DataTransfer();
           dt.items.add(file);
           fileInput.files = dt.files;
-          convertSelectedFile();
+          dropLabel.textContent = file.name;
+          dropLabel.style.fontWeight = "800";
+          dropZone.classList.add("has-file");
+          loadLayers(file);
         }
       });
 
@@ -704,12 +791,30 @@
         currentLang = langSelect.value;
         localStorage.setItem("lang", currentLang);
         applyLanguage();
+        renderArchive(galleryItems);
       });
 
       refreshArchive.addEventListener("click", loadArchive);
 
-      fileInput.addEventListener("change", convertSelectedFile);
-      summaryMode.addEventListener("change", convertSelectedFile);
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          dropLabel.textContent = file.name;
+          dropLabel.style.fontWeight = "800";
+          dropZone.classList.add("has-file");
+          loadLayers(file);
+        }
+      });
+      summaryMode.addEventListener("change", () => {
+        if (currentFile) convertSelectedFile();
+      });
+      document.getElementById("convertBtn").addEventListener("click", convertSelectedFile);
+      document.getElementById("layerSelectAll").addEventListener("click", () => {
+        document.querySelectorAll("#layerList input[type=checkbox]").forEach((cb) => cb.checked = true);
+      });
+      document.getElementById("layerDeselectAll").addEventListener("click", () => {
+        document.querySelectorAll("#layerList input[type=checkbox]").forEach((cb) => cb.checked = false);
+      });
       themeToggle.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
       applyTheme(localStorage.getItem("theme") || "light");
       applyLanguage();

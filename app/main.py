@@ -115,6 +115,28 @@ async def delete_archive(drawing: str, version: str):
     return {"ok": True}
 
 
+@app.post("/api/layers")
+async def api_layers(file: UploadFile = File(...)):
+    if not file.filename or not file.filename.lower().endswith(".dxf"):
+        raise HTTPException(status_code=400, detail="Upload a .dxf file")
+    try:
+        import tempfile, os
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".dxf")
+        tmp.write(await file.read())
+        tmp.close()
+        doc = ezdxf.readfile(tmp.name)
+        os.unlink(tmp.name)
+    except ezdxf.DXFError as exc:
+        raise HTTPException(status_code=422, detail="Could not read DXF file") from exc
+    modelspace = list(doc.modelspace())
+    layer_counts: dict[str, int] = {}
+    for entity in modelspace:
+        layer = str(entity.dxf.layer or "0")
+        layer_counts[layer] = layer_counts.get(layer, 0) + 1
+    layers = [{"name": name, "count": count} for name, count in sorted(layer_counts.items())]
+    return {"layers": layers}
+
+
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("settings.html", {"request": request, "default_styles": DEFAULT_LAYER_STYLES})
@@ -130,6 +152,7 @@ async def convert(
     file: UploadFile = File(...),
     layer_styles: str | None = Form(None),
     include_summary: bool = Form(False),
+    selected_layers: str | None = Form(None),
 ):
     if not file.filename or not file.filename.lower().endswith(".dxf"):
         raise HTTPException(status_code=400, detail="Upload a .dxf file")
@@ -142,8 +165,16 @@ async def convert(
             doc = ezdxf.readfile(input_path)
         except ezdxf.DXFError as exc:
             raise ValueError("Could not read DXF file") from exc
-        stats, mm_per_unit = convert_dxf_to_pdf(input_path, output_pdf, layer_styles, include_summary=include_summary, doc=doc)
-        convert_dxf_to_svg(input_path, output_svg, layer_styles, doc=doc)
+
+        layers_filter = None
+        if selected_layers:
+            try:
+                layers_filter = json.loads(selected_layers)
+            except (json.JSONDecodeError, TypeError):
+                layers_filter = None
+
+        stats, mm_per_unit = convert_dxf_to_pdf(input_path, output_pdf, layer_styles, include_summary=include_summary, doc=doc, selected_layers=layers_filter)
+        convert_dxf_to_svg(input_path, output_svg, layer_styles, doc=doc, selected_layers=layers_filter)
         summary_data = stats_to_dict(stats, mm_per_unit)
         output_summary.write_text(json.dumps(summary_data, ensure_ascii=False), encoding="utf-8")
     except ValueError as exc:
@@ -163,6 +194,7 @@ async def convert(
 async def convert_svg(
     file: UploadFile = File(...),
     layer_styles: str | None = Form(None),
+    selected_layers: str | None = Form(None),
 ) -> FileResponse:
     if not file.filename or not file.filename.lower().endswith(".dxf"):
         raise HTTPException(status_code=400, detail="Upload a .dxf file")
@@ -171,7 +203,13 @@ async def convert_svg(
 
     try:
         input_path.write_bytes(await file.read())
-        convert_dxf_to_svg(input_path, output_svg, layer_styles)
+        layers_filter = None
+        if selected_layers:
+            try:
+                layers_filter = json.loads(selected_layers)
+            except (json.JSONDecodeError, TypeError):
+                layers_filter = None
+        convert_dxf_to_svg(input_path, output_svg, layer_styles, selected_layers=layers_filter)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:

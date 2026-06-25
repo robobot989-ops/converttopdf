@@ -35,6 +35,7 @@ def convert_dxf_to_svg(
     output_path: Path,
     raw_layer_styles: str | None = None,
     doc: ezdxf.EzdxfDocument | None = None,
+    selected_layers: list[str] | None = None,
 ) -> None:
     if doc is None:
         try:
@@ -43,6 +44,9 @@ def convert_dxf_to_svg(
             raise ValueError("Could not read DXF file") from exc
 
     modelspace = list(doc.modelspace())
+    if selected_layers:
+        selected_set = set(selected_layers)
+        modelspace = [e for e in modelspace if str(e.dxf.layer or "0") in selected_set]
     bounds = collect_bounds(modelspace)
     if bounds.is_empty:
         raise ValueError("DXF file does not contain supported drawable entities")
