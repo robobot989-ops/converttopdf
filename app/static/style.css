@@ -201,46 +201,74 @@ button:hover,
   white-space: nowrap;
 }
 
-.settings-link {
+.icon-btn {
   display: inline-flex;
   align-items: center;
-  padding: 10px 16px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
   border-radius: 12px;
-  font-size: 13px;
-  font-weight: var(--font-weight-semibold);
-  text-decoration: none;
-  color: var(--button-text);
   background: var(--button);
-  transition: background 0.15s, color 0.15s;
+  color: var(--button-text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  text-decoration: none;
+  line-height: 1;
 }
 
-.settings-link:hover {
+.icon-btn:hover {
   background: var(--accent);
   color: white;
+  border-color: var(--accent);
 }
+
+.lang-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.lang-select-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 56px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  display: none;
+}
+
+.lang-icon-wrap.open .lang-select-popup {
+  display: block;
+}
+
+[data-theme="dark"] .lang-select-popup {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.lang-select-popup option {
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.icon-moon { display: none; }
+[data-theme="dark"] .icon-sun { display: none; }
+[data-theme="dark"] .icon-moon { display: block; }
 
 .topbar-actions {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.lang-select {
-  min-height: 42px;
-  min-width: 72px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--button);
-  color: var(--button-text);
-  font-size: 12px;
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-}
-
-.lang-select:hover {
-  background: var(--accent);
-  color: white;
 }
 
 .settings,
@@ -829,17 +857,14 @@ details[open] .summary-hint {
     justify-content: flex-start;
   }
 
-  .lang-select {
-    min-width: 60px;
-    min-height: 36px;
-    font-size: 11px;
+  .icon-btn {
+    width: 36px;
+    height: 36px;
   }
 
-  .theme-toggle,
-  .settings-link {
-    font-size: 11px;
-    min-height: 36px;
-    padding: 8px 12px;
+  .icon-btn svg {
+    width: 16px;
+    height: 16px;
   }
 
   .download-group {
@@ -971,18 +996,15 @@ details[open] .summary-hint {
   }
 
   button,
-  .download,
-  .settings-link {
+  .download {
     font-size: 11px;
     min-height: 34px;
     padding: 6px 10px;
   }
 
-  .lang-select {
-    min-width: 52px;
-    min-height: 34px;
-    font-size: 10px;
-    padding: 0 6px;
+  .icon-btn {
+    width: 34px;
+    height: 34px;
   }
 
   .drop-zone {
